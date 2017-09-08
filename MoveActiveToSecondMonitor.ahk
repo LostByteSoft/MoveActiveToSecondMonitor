@@ -10,7 +10,7 @@
 
 	SetEnv, title, MoveActiveToSecondMonitor
 	SetEnv, mode, Toggle move F8
-	SetEnv, version, Version 2017-09-02-1353
+	SetEnv, version, Version 2017-09-08-1137
 	SetEnv, Author, LostByteSoft
 
 ;;--- Softwares options ---
@@ -52,38 +52,37 @@
 	menu, tray, add
 	Menu, tray, add, Hotkey : F8, F8
 	Menu, Tray, Icon, Hotkey : F8, ico_HotKeys.ico
+	menu, tray, add
 	Menu, Tray, Tip, %mode%
 
 ;;--- Software start here ---
 
+	TrayTip, %title%, Press F8, 2, 1
+
+	; MsgBox, Ecran 1 Left: %Mon1Left% -- Top: %Mon1Top% -- Right: %Mon1Right% -- Bottom %Mon1Bottom%....Ecran 2 %Mon2Left% -- Top: %Mon2Top% -- Right: %Mon2Right% -- Bottom %Mon2Bottom%....
+
 
 start:
+
 	KeyWait, F8 , D
+
 	; IfEqual, MonitorCount, 1, goto, error01
 
 skip:
 	WinGetTitle, LastActive, A
-	WinGetPos, X, Y, w, h, A  						; "A" to get the active window's pos.
-	MsgBox, The active window is "%LastActive%" ... The active window is at %X% %Y% %w% %h% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%
+	WinGetPos, X, Y, w, h, A 		; "A" to get the active window's pos.
+	IfEqual, var, 1, goto, reverse
 
-;Gui +HwndMainGui -Border
-;Gui, Add, Button, gMove, Move
-;Gui, Add, Button, gExit x+5 yp, Exit
-;Gui, Show, x0 y0 ; adjust x and y so gui appears where you want it on the TV
+	SetEnv, var, 1
+	; MsgBox, The active window is "%LastActive%" ... The active window is at %X% %Y% %w% %h% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%
+	WinMove, %LastActive%,, %Mon2Left%, %Mon2Top%, %w%, %h%
+	Goto, start
 
-;Loop
-;{
-	WinGet, CheckHwnd, ID, A
-	if (CheckHwnd != MainGui)
-		LastActive := CheckHwnd
-	Sleep, 50
-;}
-;return
 
-Move:
-	WinMove, ahk_id %LastActive%,, %x%, %y%					 ; adjust x and y so window will appear on the TV
-;return
-
+reverse:
+	SetEnv, var, 0
+	; MsgBox, The active window is "%LastActive%" ... The active window is at %X% %Y% %w% %h% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%
+	WinMove, %LastActive%,, %Mon1Left%, %Mon1Top%, %w%, %h%
 	Goto, start
 
 
