@@ -6,13 +6,13 @@
 ;;	64 bit AHK version : 1.1.24.2 64 bit Unicode
 ;;	2 screen supported.
 
-;;	Click on an windows and press F8 , if windows not move press F8 again.
+;;	Click on an windows and press F4 , if windows not move press F4 again.
 
 ;;--- Softwares Variables ---
 
 	SetEnv, title, MoveActiveToSecondMonitor
-	SetEnv, mode, Toggle move F8
-	SetEnv, version, Version 2017-09-08-1137
+	SetEnv, mode, Toggle move F4
+	SetEnv, version, Version 2017-09-08-1722
 	SetEnv, Author, LostByteSoft
 
 ;;--- Softwares options ---
@@ -29,8 +29,8 @@
 	FileInstall, ico_lock.ico, ico_lock.ico, 0
 	FileInstall, ico_monitor_w.ico, ico_monitor_w.ico, 0
 	FileInstall, ico_monitor.ico, ico_monitor.ico, 0
-	FileInstall, ico_reboot.ico, ico_reboot.ico, 0
 	FileInstall, ico_shut.ico, ico_shut.ico, 0
+	FileInstall, ico_reboot.ico, ico_reboot.ico, 0
 
 	SysGet, MonitorCount, MonitorCount
 	SysGet, MonitorPrimary, MonitorPrimary
@@ -41,34 +41,39 @@
 
 	Menu, Tray, NoStandard
 	Menu, Tray, Icon, ico_monitor_w.ico
-	Menu, tray, add, --= %title% =--, about
+	Menu, tray, add, --= %title% =--, about1
 	Menu, Tray, Icon, --= %title% =--, ico_monitor.ico
 	Menu, tray, add, Show logo, GuiLogo
 	Menu, tray, add, Secret MsgBox, secret					; Secret MsgBox, just show all options and variables of the program
 	Menu, Tray, Icon, Secret MsgBox, ico_lock.ico
-	menu, tray, add
+	Menu, tray, add,
+	Menu, tray, add, About LostByteSoft, about2				; Creates a new menu item.
+	Menu, Tray, Icon, About LostByteSoft, ico_about.ico
+	Menu, tray, add, %Version%, Version					; Show version
+	Menu, Tray, Icon, %Version%, ico_about.ico
+	Menu, tray, add,
 	Menu, tray, add, Exit, Exit						; GuiClose exit program
 	Menu, Tray, Icon, Exit, ico_shut.ico
-	Menu, tray, add, Refresh FitScreen, doReload				; Reload the script.
+	Menu, tray, add, Refresh FitScreen, doReload				; Reload the script. Usefull if you change something in configuration
 	Menu, Tray, Icon, Refresh FitScreen, ico_reboot.ico
-	menu, tray, add
-	Menu, tray, add, Hotkey : F8, F8
-	Menu, Tray, Icon, Hotkey : F8, ico_HotKeys.ico
+	menu, tray, add,
+	Menu, tray, add, Hotkey : F4, F4
+	Menu, Tray, Icon, Hotkey : F4, ico_HotKeys.ico
 	menu, tray, add
 	Menu, Tray, Tip, %mode%
 
 ;;--- Software start here ---
 
-	TrayTip, %title%, Press F8, 2, 1
+	TrayTip, %title%, Press F4, 2, 1
 
-	; MsgBox, Ecran 1 Left: %Mon1Left% -- Top: %Mon1Top% -- Right: %Mon1Right% -- Bottom %Mon1Bottom%....Ecran 2 %Mon2Left% -- Top: %Mon2Top% -- Right: %Mon2Right% -- Bottom %Mon2Bottom%....
+	;; MsgBox, Last active %Title% ... The active window is "%Title%"`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
 
 	; in need of detecting monitor and move to another monitor
 	; verify to not overpass the screen border if sceen is smaller than the one
 
 
 start:
-	KeyWait, F8 , D
+	KeyWait, F4 , D
 	IfEqual, MonitorCount, 1, goto, error01
 
 skip:
@@ -79,30 +84,30 @@ skip:
 
 forward:
 	SetEnv, var, 1
-	; MsgBox, The active window is "%LastActive%" ... The active window is at %X% %Y% %w% %h% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%
 
-	newx := %Mon2Left% - %x%
+	newx := Mon2Left - x
 
 	WinMove, %LastActive%,, %newx%, %Mon2Top%, %w%, %h%
+	Sleep, 500
 	Goto, start
 
 
 reverse:
 	SetEnv, var, 0
-	; MsgBox, The active window is "%LastActive%" ... The active window is at %X% %Y% %w% %h% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%
 
-	newx := %Mon2Left% - %x%
+	newx := Mon2Left - x
 
 	WinMove, %LastActive%,, %newx%, %Mon2Top%, %w%, %h%
+	Sleep, 500
 	Goto, start
 
 
 error01:
 	WinGetTitle, LastActive, A
 	WinGetPos, X, Y, w, h, A
-	newx := %Mon2Left% - %x%
+	newx := Mon2Left - x
 	MsgBox, 48, %title%, You have only 1 monitor. This software requires 2 monitors.
-	MsgBox, The active window is "%LastActive%" ... The active window is at %X% %Y% %w% %h% newx=%newx% Mon2Left=%Mon2Left% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%
+	MsgBox, Last active %Title% ... The active window is "%Title%"`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
 	goto, start
 
 
@@ -113,19 +118,23 @@ Exit:
 
 ;;--- Tray Bar (must be at end of file) ---
 
-F8:
+F4:
 	; IfEqual, MonitorCount, 1, goto, error01
 	TrayTip, %title%, Select a Windows with your mouse, 2, 1
 	KeyWait, LButton, D
 	Goto, skip
 
 secret:
+	TrayTip, %title%, You must click on an windows., 2, 1
+	KeyWait, LButton, D
 	WinGetTitle, LastActive, A
 	WinGetPos, X, Y, w, h, A
-	MsgBox, Last active %Title% ... The active window is "%Title%" ... The active window is at %X% %Y% %w% %h% ... MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary% `n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
+	newx := Mon2Left - x
+	MsgBox, Last active %Title% ... The active window is "%Title%"`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
 	Return
 
-about:
+about1:
+about2:
 	TrayTip, %title%, %mode% by %author%, 2, 1
 	Sleep, 500
 	Return
