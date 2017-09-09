@@ -5,7 +5,7 @@
 ;;	All files must be in same folder. Where you want.
 ;;	64 bit AHK version : 1.1.24.2 64 bit Unicode
 ;;	2 screen supported.
-
+;;	THANKS https://autohotkey.com/board/topic/85457-detecting-the-screen-the-current-window-is-on/
 ;;	Click on an windows and press F4 , if windows not move press F4 again.
 
 ;;--- Softwares Variables ---
@@ -66,50 +66,64 @@
 
 	TrayTip, %title%, Press F4, 2, 1
 
-	;; MsgBox, Last active %Title% ... The active window is "%Title%"`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
-
-	; in need of detecting monitor and move to another monitor
 	; verify to not overpass the screen border if sceen is smaller than the one
-
 
 start:
 	KeyWait, F4 , D
-	IfEqual, MonitorCount, 1, goto, error01
+	IfEqual, MonitorCount, 1, goto, secret
 
-skip:
+	currMon := GetCurrentMonitor()
 
 	WinGetTitle, LastActive, A
 	WinGetPos, X, Y, w, h, A 		; "A" to get the active window's pos.
-	IfEqual, var, 1, goto, reverse
+
+	;; msgbox, LastActive=%LastActive%`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`ncurrMon=%currMon%  MonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
+
+	IfEqual, currMon, 0, Goto, error_00
+	IfEqual, currMon, 1, Goto, reverse
+	IfEqual, currMon, 2, Goto, forward
+	IfEqual, currMon, 3, Goto, error_00
+	goto, start
 
 forward:
-	SetEnv, var, 1
-
-	newx := Mon2Left - x
-
-	WinMove, %LastActive%,, %newx%, %Mon2Top%, %w%, %h%
+	newx := Mon2Left + x
+	;;msgbox,  Mon1Left=%Mon1Left% Mon2Left=%Mon2Left% LastActive=%LastActive%`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%
+	WinMove, %LastActive%,, %newx%, %y%, %w%, %h%
 	Sleep, 500
 	Goto, start
 
 
 reverse:
-	SetEnv, var, 0
-
 	newx := Mon2Left - x
-
-	WinMove, %LastActive%,, %newx%, %Mon2Top%, %w%, %h%
+	;;msgbox,  Mon1Left=%Mon1Left% Mon2Left=%Mon2Left% LastActive=%LastActive%`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%
+	WinMove, %LastActive%,, %newx%, %y%, %w%, %h%
 	Sleep, 500
 	Goto, start
 
+error_00:
+	MsgBox, error_00 screen undctected or you have 3 screen.
+	Goto, Start
 
-error01:
-	WinGetTitle, LastActive, A
-	WinGetPos, X, Y, w, h, A
-	newx := Mon2Left - x
-	MsgBox, 48, %title%, You have only 1 monitor. This software requires 2 monitors.
-	MsgBox, Last active %Title% ... The active window is "%Title%"`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
-	goto, start
+;;--- Fonction ---
 
+GetCurrentMonitor()
+	{
+	SysGet, numberOfMonitors, MonitorCount
+	; WinGetPos, winX, winY, winWidth, winHeight, A
+	; winMidX := winX + winWidth / 2
+	; winMidY := winY + winHeight / 2
+	; winMidX := winX + winWidth
+	; winMidY := winY + winHeight
+		Loop %numberOfMonitors%
+		{
+			SysGet, monArea, Monitor, %A_Index%
+			; MsgBox, aindex=%A_Index% monarealeft=%monAreaLeft% winx=%winX%
+			; if (winMidX > monAreaLeft && winMidX < monAreaRight && winMidY < monAreaBottom && winMidY > monAreaTop)
+			return A_Index
+		}
+	SysGet, primaryMonitor, MonitorPrimary
+	return "No Monitor Found"
+	}
 
 ;;--- Quit (escape , esc) ---
 
@@ -122,7 +136,7 @@ F4:
 	; IfEqual, MonitorCount, 1, goto, error01
 	TrayTip, %title%, Select a Windows with your mouse, 2, 1
 	KeyWait, LButton, D
-	Goto, skip
+	Goto, start
 
 secret:
 	TrayTip, %title%, You must click on an windows., 2, 1
@@ -130,7 +144,7 @@ secret:
 	WinGetTitle, LastActive, A
 	WinGetPos, X, Y, w, h, A
 	newx := Mon2Left - x
-	MsgBox, Last active %Title% ... The active window is "%Title%"`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
+	MsgBox, currMon=%currMon% LastActive=%LastActive%`n`nThe active window is at %X% %Y% %w% %h% newx=%newx%`n`nMonitorCount=%MonitorCount% MonitorPrimary=%MonitorPrimary%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% --- `n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
 	Return
 
 about1:
