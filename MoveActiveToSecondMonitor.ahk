@@ -21,8 +21,13 @@
 
 	SetEnv, title, MoveActiveToSecondMonitor
 	SetEnv, mode, Toggle move %shortcut%
-	SetEnv, version, Version 2017-09-20-1429
+	SetEnv, version, Version 2017-09-27-1602
 	SetEnv, Author, LostByteSoft
+
+	SetEnv, leftMonitorWidth, 0
+	SetEnv, leftMonitorHeight, 0
+	SetEnv, rightMonitorWidth, 0
+	SetEnv, rightMonitorHeight, 0
 
 	FileInstall, ico_about.ico, ico_about.ico, 0
 	FileInstall, ico_HotKeys.ico, ico_HotKeys.ico, 0
@@ -34,12 +39,14 @@
 	FileInstall, ico_options.ico, ico_options.ico, 0
 
 	IniRead, shortcut, MoveActiveToSecondMonitor.ini, options, shortcut
+	IniRead, traybar, MoveActiveToSecondMonitor.ini, options, traybar
+	IniRead, autoconfig, MoveActiveToSecondMonitor.ini, options, autoconfig
 
 ;;--- Menu Tray options ---
 
 	Menu, Tray, NoStandard
 	Menu, Tray, Icon, ico_monitor_w.ico
-	Menu, tray, add, --= %title% =--, about1
+	Menu, tray, add, --= %title% =--, GuiLogo
 	Menu, Tray, Icon, --= %title% =--, ico_monitor.ico
 	Menu, tray, add, Show logo, GuiLogo
 	Menu, tray, add, Secret MsgBox, secret					; Secret MsgBox, just show all options and variables of the program
@@ -65,10 +72,6 @@
 ;;--- Software start here 1 ---
 
 	TrayTip, %title%, %mode% Shortcut=%shortcut%, 2, 1
-
-;; Use ini or auto config
-
-	IniRead, autoconfig, MoveActiveToSecondMonitor.ini, options, autoconfig
 	IfEqual, autoconfig, 0, goto, Iniread
 	IfEqual, autoconfig, 1, goto, autoconfig
 	Goto, error_00
@@ -78,6 +81,7 @@
 		IniRead, leftMonitorHeight, MoveActiveToSecondMonitor.ini, options, leftMonitorHeight
 		IniRead, rightMonitorWidth, MoveActiveToSecondMonitor.ini, options, rightMonitorWidth
 		IniRead, rightMonitorHeight, MoveActiveToSecondMonitor.ini, options, rightMonitorHeight
+		leftMonitorHeight -= traybar						; Tray bar
 		Goto, Start
 
 	autoconfig:
@@ -86,25 +90,25 @@
 		SysGet, Mon1, Monitor, 1
 		SysGet, Mon2, Monitor, 2
 
-		newrightMonitorWidth := Mon1Right - Mon2Right
-		newleftMonitorHeight := Mon1Bottom - 38		; Tray bar
+		leftMonitorWidth = %Mon2Right%
+		leftMonitorHeight := Mon2Bottom - traybar				; Tray bar
+		rightMonitorWidth = %Mon1Left%
+		rightMonitorHeight = %Mon1Bottom%
 
-		leftMonitorWidth = %Mon1Right%
-		leftMonitorHeight = %newleftMonitorHeight%
-		rightMonitorWidth = %newrightMonitorWidth%
-		rightMonitorHeight = %Mon2Bottom%
-		;;msgbox, LastActive=%LastActive%`n`nThe active window is at %X% %Y% %w%`n`nMonitorPrimary=%MonitorPrimary% MonitorCount=%MonitorCount% shortcut=%shortcut%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% ---`n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%`n`nHere it must be your 2 resolutions .. Screen 1 = %leftMonitorWidth% %leftMonitorHeight% Screen 2 =  %rightMonitorWidth% %rightMonitorHeight%
-		Goto, Start
+		IfLess, leftMonitorWidth, -1, goto, negative
+		goto, start
+
+		negative:
+		leftMonitorWidth *=-1
+		goto, start
 
 ;;--- Software start here 2 ---
 
-
 Start:
 	KeyWait, %shortcut% , D
-	IfEqual, MonitorCount, 1, goto, error_00
 
 Movetray:
-
+	IfEqual, MonitorCount, 1, goto, error_00
 	activeWindow := WinActive("A")
 	if activeWindow = 0
 		{
@@ -143,15 +147,13 @@ Movetray:
 		}
 	WinActivate ahk_id %activeWindow%   ;Needed - otherwise another window may overlap it
 	KeyWait, %shortcut%
-	;;Sleep, 500
 	goto, start
 
 error_00:
 	KeyWait, %shortcut%
-	Random, error_00, 1111, 9999
-	TrayTip, %title%, error_%error_00% You have only 1 screen. You must have at least 2 monitors. Something when wrong., 2, 1
-	;; MsgBox, error_%error_00% You have only 1 screen. You must have at least 2 monitors.
-	Sleep, 2000
+	Random, error, 1111, 9999
+	TrayTip, %title%, error_%error% You have only 1 screen. You must have at least 2 monitors. Something when wrong., 2, 1
+	Sleep, 500
 	Goto, Start
 
 ;;--- Quit (escape , esc) ---
@@ -166,16 +168,47 @@ tray:
 	KeyWait, LButton, D
 	Goto, Movetray
 
-secret:
+secret:													; for debug and informations
+	IniRead, autoconfig, MoveActiveToSecondMonitor.ini, options, autoconfig
 	TrayTip, %title%, You must click on an windows. With Left mouse button., 2, 1
+
 	KeyWait, LButton, D
+
 	WinGetTitle, LastActive, A
 	WinGetPos, X, Y, w, h, A
 	SysGet, MonitorCount, MonitorCount
 	SysGet, MonitorPrimary, MonitorPrimary
 	SysGet, Mon1, Monitor, 1
 	SysGet, Mon2, Monitor, 2
-	msgbox, LastActive=%LastActive%`n`nThe active window is at %X% %Y% %w%`n`nMonitorPrimary=%MonitorPrimary% MonitorCount=%MonitorCount% shortcut=%shortcut%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% ---`n`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%`n`nHere it must be your 2 resolutions .. Screen 1 = %leftMonitorWidth% %leftMonitorHeight% Screen 2 =  %rightMonitorWidth% %rightMonitorHeight%
+	IfEqual, autoconfig, 0, goto, secretmanu
+	IfEqual, autoconfig, 1, goto, secretauto
+	Goto, error_00
+
+	secretauto:
+	leftMonitorWidth = %Mon1Right%
+	leftMonitorHeight := Mon1Bottom - traybar							; Tray bar
+	rightMonitorWidth = %Mon2Left%
+	rightMonitorHeight = %Mon2Bottom%
+	IfLess, leftMonitorWidth, -1, goto, negative1
+	goto, msgboxauto
+	negative1:
+	leftMonitorWidth *=-1
+	msgboxauto:
+	msgbox, 64, %title%,title=%title% mode=%mode% version=%version% author=%author% A_ScriptDir=%A_ScriptDir% LastActive=%LastActive%`n`nThe active window is at X=%X% Y=%Y% W=%w% H=%h%`n`nMonitorPrimary=%MonitorPrimary% MonitorCount=%MonitorCount% shortcut=%shortcut% autoconfig=%autoconfig% traybar=%traybar%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% ---`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%`n`nHere it must be your 2 resolutions Autoconfig=%Autoconfig% :`n`nScreen 1 = %leftMonitorWidth% x %leftMonitorHeight%`nScreen 2 = %rightMonitorWidth% x %rightMonitorHeight%
+	Return
+
+	secretmanu:
+	IniRead, leftMonitorWidth, MoveActiveToSecondMonitor.ini, options, leftMonitorWidth
+	IniRead, leftMonitorHeight, MoveActiveToSecondMonitor.ini, options, leftMonitorHeight
+	IniRead, rightMonitorWidth, MoveActiveToSecondMonitor.ini, options, rightMonitorWidth
+	IniRead, rightMonitorHeight, MoveActiveToSecondMonitor.ini, options, rightMonitorHeight
+	leftMonitorWidth -= traybar									; Tray bar
+	IfLess, leftMonitorWidth, -1, goto, negative2
+	goto, msgboxmanu
+	negative2:
+	leftMonitorWidth *=-1
+	msgboxmanu:
+	msgbox, 64, %title%,title=%title% mode=%mode% version=%version% author=%author% A_ScriptDir=%A_ScriptDir% LastActive=%LastActive%`n`nThe active window is at X=%X% Y=%Y% W=%w% H=%h%`n`nMonitorPrimary=%MonitorPrimary% MonitorCount=%MonitorCount% shortcut=%shortcut% autoconfig=%autoconfig% traybar=%traybar%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% ---`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%`n`nHere it must be your 2 resolutions Autoconfig=%Autoconfig% :`n`nScreen 1 = %leftMonitorWidth% x %leftMonitorHeight%`nScreen 2 = %rightMonitorWidth% x %rightMonitorHeight%
 	Return
 
 about1:
