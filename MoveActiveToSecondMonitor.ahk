@@ -13,21 +13,18 @@
 ;;--- Softwares Variables ---
 
 	SetWorkingDir, %A_ScriptDir%
+	SetTitleMatchMode, 2
+	SetTitleMatchMode, Slow
+	#NoEnv
 	#SingleInstance Force
 	#Persistent
-	#NoEnv
-	SetTitleMatchMode, Slow
-	SetTitleMatchMode, 2
 
-	SetEnv, title, MoveActiveToSecondMonitor
+	SetEnv, title, ActiveToSecondMonitor
 	SetEnv, mode, Toggle move %shortcut%
-	SetEnv, version, Version 2017-09-27-1650
+	SetEnv, version, Version 2017-10-01-0901
 	SetEnv, Author, LostByteSoft
-
-	SetEnv, MainMonitorWidth, 0
-	SetEnv, MainMonitorHeight, 0
-	SetEnv, SecondMonitorWidth, 0
-	SetEnv, SecondMonitorHeight, 0
+	SetEnv, logoicon, ico_monitor.ico
+	SetEnv, debug, 0					;; When 1 show all MsgBox for debug, when 0 no MsgBox
 
 	FileInstall, ico_about.ico, ico_about.ico, 0
 	FileInstall, ico_HotKeys.ico, ico_HotKeys.ico, 0
@@ -42,38 +39,45 @@
 	IniRead, traybar, MoveActiveToSecondMonitor.ini, options, traybar
 	IniRead, autoconfig, MoveActiveToSecondMonitor.ini, options, autoconfig
 
+	Menu, Tray, Icon, ico_monitor_w.ico
+
 ;;--- Menu Tray options ---
 
 	Menu, Tray, NoStandard
-	Menu, Tray, Icon, ico_monitor_w.ico
-	Menu, tray, add, --= %title% =--, GuiLogo
-	Menu, Tray, Icon, --= %title% =--, ico_monitor.ico
+	Menu, tray, add, ---=== %title% ===---, about
+	Menu, Tray, Icon, ---=== %title% ===---, %logoicon%
 	Menu, tray, add, Show logo, GuiLogo
 	Menu, tray, add, Secret MsgBox, secret					; Secret MsgBox, just show all options and variables of the program
 	Menu, Tray, Icon, Secret MsgBox, ico_lock.ico
-	Menu, tray, add, About LostByteSoft, about2				; Creates a new menu item.
-	Menu, Tray, Icon, About LostByteSoft, ico_about.ico
-	Menu, tray, add, %Version%, Version					; Show version
-	Menu, Tray, Icon, %Version%, ico_about.ico
+	Menu, tray, add, About && ReadMe, author
+	Menu, Tray, Icon, About && ReadMe, ico_about.ico
+	Menu, tray, add, Author %author%, about
+	menu, tray, disable, Author %author%
+	Menu, tray, add, %version%, about
+	menu, tray, disable, %version%
 	Menu, tray, add,
-	Menu, tray, add, Exit, Exit						; GuiClose exit program
+	Menu, tray, add, Exit, Close						; Close exit program
 	Menu, Tray, Icon, Exit, ico_shut.ico
 	Menu, tray, add, Refresh FitScreen, doReload				; Reload the script. Usefull if you change something in configuration
 	Menu, Tray, Icon, Refresh FitScreen, ico_reboot.ico
 	Menu, tray, add,
-	Menu, tray, add, Change settings (ini), settings					; Show version
+	Menu, tray, add, Change settings (ini), settings
 	Menu, Tray, Icon, Change settings (ini), ico_options.ico
 	Menu, tray, add, Auto 1 & Manu 0 = %autoconfig%, AutoManu
-	Menu, Tray, Icon, Auto 1 & Manu 0 = %autoconfig%, ico_options.ico
+	;Menu, Tray, Icon, Auto 1 & Manu 0 = %autoconfig%, ico_options.ico
+	Menu, tray, add, Debug MsgBox = 0, debug
 	menu, tray, add,
 	Menu, tray, add, Hotkey : %shortcut%, tray
 	Menu, Tray, Icon, Hotkey : %shortcut%, ico_HotKeys.ico
 	menu, tray, add
 	Menu, Tray, Tip, %mode% shortcut=%shortcut%
 
-;;--- Software start here 1 ---
+;;--- Automatic or Manual configuration ---
 
 	; TrayTip, %title%, %mode% Shortcut=%shortcut%, 2, 1
+
+loadconf:
+	IfEqual, debug, 1, MsgBox, autoconfig=%autoconfig%
 	IfEqual, autoconfig, 0, goto, Iniread
 	IfEqual, autoconfig, 1, goto, autoconfig
 	Goto, error_00
@@ -84,6 +88,7 @@
 		IniRead, SecondMonitorWidth, MoveActiveToSecondMonitor.ini, options, SecondMonitorWidth
 		IniRead, SecondMonitorHeight, MoveActiveToSecondMonitor.ini, options, SecondMonitorHeight
 		MainMonitorHeight -= traybar						; Tray bar
+		IfEqual, debug, 1, MsgBox, Resolutions manual : MainMonitorWidth=%MainMonitorWidth% - MainMonitorHeight=%MainMonitorHeight%(tray bar is removed) - SecondMonitorWidth=%SecondMonitorWidth% - SecondMonitorHeight=%SecondMonitorHeight%
 		Goto, Start
 
 	autoconfig:
@@ -92,28 +97,34 @@
 		SysGet, Mon1, Monitor, 1
 		SysGet, Mon2, Monitor, 2
 
-		MainMonitorWidth := %Mon1Left%
-		MainMonitorHeight := %Mon1Bottom%
+		MainMonitorWidth := Mon1Right
+		MainMonitorHeight := Mon1Bottom
 		SecondMonitorWidth := Mon2Left
 		SecondMonitorHeight := Mon2Bottom
 
 		MainMonitorHeight -= traybar						; Tray bar
 
 		IfLess, SecondMonitorWidth, -1, goto, negative
+		IfEqual, debug, 1, MsgBox, Resolutions automatic : MainMonitorWidth = %MainMonitorWidth% - MainMonitorHeight = %MainMonitorHeight% (tray bar is removed) - SecondMonitorWidth =%SecondMonitorWidth% - SecondMonitorHeight = %SecondMonitorHeight%
 		goto, start
 
 		negative:
 		SecondMonitorWidth *=-1
+		IfEqual, debug, 1, MsgBox, Resolutions automatic : MainMonitorWidth = %MainMonitorWidth% - MainMonitorHeight = %MainMonitorHeight% (tray bar is removed) - SecondMonitorWidth =%SecondMonitorWidth% - SecondMonitorHeight = %SecondMonitorHeight%
 		goto, start
 
-;;--- Software start here 2 ---
+;;--- Software start here ---
 
 Start:
+	IfEqual, debug, 1, MsgBox, waiting shortcut=%shortcut% - Mbutton = mouse middle button.
 	KeyWait, %shortcut% , D
 
 Movetray:
+	IfEqual, debug, 1, Goto, bypass
 	IfEqual, MonitorCount, 1, goto, error_00
+	bypass:
 	activeWindow := WinActive("A")
+	IfEqual, debug, 1, MsgBox, active windows for deplacement = %activeWindow%
 	if activeWindow = 0
 		{
 			return
@@ -149,7 +160,7 @@ Movetray:
 		{
 			WinMaximize, ahk_id %activeWindow%
 		}
-	WinActivate ahk_id %activeWindow%   ;Needed - otherwise another window may overlap it
+	WinActivate ahk_id %activeWindow% 		 ;Needed - otherwise another window may overlap it
 	KeyWait, %shortcut%
 	goto, start
 
@@ -162,7 +173,10 @@ error_00:
 
 ;;--- Quit (escape , esc) ---
 
-Exit:
+Close:
+	ExitApp
+
+; Escape::		; Debug purpose
 	ExitApp
 
 ;;--- Tray Bar (must be at end of file) ---
@@ -212,9 +226,24 @@ secret:													; for debug and informations
 	goto, msgboxMAS
 
 	msgboxMAS:
-	msgbox, 64, %title%,title=%title% mode=%mode% version=%version% author=%author% A_ScriptDir=%A_ScriptDir% LastActive=%LastActive%`n`nThe active window is at X=%X% Y=%Y% W=%w% H=%h%`n`nMonitorPrimary=%MonitorPrimary% MonitorCount=%MonitorCount% shortcut=%shortcut% autoconfig=%autoconfig% traybar=%traybar%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% ---`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%`n`nHere it must be your 2 resolutions :`n`nScreen 1 = %MainMonitorWidth% x %MainMonitorHeight%`nScreen 2 = %SecondMonitorWidth% x %SecondMonitorHeight%
+	msgbox, 48, %title%,title=%title% mode=%mode% version=%version% author=%author% logoicon=%logoicon% A_ScriptDir=%A_ScriptDir% LastActive=%LastActive%`n`nThe active window is at X=%X% Y=%Y% W=%w% H=%h%`n`nMonitorPrimary=%MonitorPrimary% MonitorCount=%MonitorCount% shortcut=%shortcut% autoconfig=%autoconfig% traybar=%traybar%`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom% ---`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%`n`nHere it must be your 2 resolutions :`n`nScreen 1 = %MainMonitorWidth% x %MainMonitorHeight%`nScreen 2 = %SecondMonitorWidth% x %SecondMonitorHeight%
 	Return
 
+debug:
+	IfEqual, debug, 0, goto, debug1
+	IfEqual, debug, 1, goto, debug0
+
+	debug0:
+	Menu, Tray, Rename, Debug MsgBox = 1, Debug MsgBox = 0
+	SetEnv, debug, 0
+	goto, loadconf
+
+	debug1:
+	Menu, Tray, Rename, Debug MsgBox = 0, Debug MsgBox = 1
+	SetEnv, debug, 1
+	goto, loadconf
+
+about:
 about1:
 about2:
 	TrayTip, %title%, %mode% by %author%, 2, 1
@@ -226,16 +255,20 @@ version:
 	Sleep, 1000
 	Return
 
-doReload:
-	Reload
-	sleep, 1000
+author:
+	MsgBox, 64, %title%, %title% %mode% %version% %author%. This software is usefull to move windows between two screen.`n`n`tGo to https://github.com/LostByteSoft
 	Return
 
+doReload:
+	Reload
+	sleep, 100
+	goto, Close
+
 GuiLogo:
-	Gui, Add, Picture, x25 y25 w400 h400 , ico_monitor.ico
+	Gui, Add, Picture, x25 y25 w400 h400 , %logoicon%
 	Gui, Show, w450 h450, %title% Logo
 	; Gui, Color, 000000
-	sleep, 1000
+	Sleep, 500
 	return
 
 settings:
@@ -249,11 +282,11 @@ AutoManu:
 
 	autoconfig0:
 	IniWrite, 0, MoveActiveToSecondMonitor.ini, options, autoconfig
-	Reload
+	goto, doReload
 
 	autoconfig1:
 	IniWrite, 1, MoveActiveToSecondMonitor.ini, options, autoconfig
-	Reload
+	goto, doReload
 
 ;;--- End of script ---
 ;
