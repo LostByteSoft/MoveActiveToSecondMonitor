@@ -21,7 +21,7 @@
 
 	SetEnv, title, ActiveToSecondMonitor
 	SetEnv, mode, Toggle move %shortcut%
-	SetEnv, version, Version 2017-10-01-0901
+	SetEnv, version, Version 2017-10-12-1610
 	SetEnv, Author, LostByteSoft
 	SetEnv, logoicon, ico_monitor.ico
 	SetEnv, debug, 0					;; When 1 show all MsgBox for debug, when 0 no MsgBox
@@ -35,11 +35,15 @@
 	FileInstall, ico_reboot.ico, ico_reboot.ico, 0
 	FileInstall, ico_options.ico, ico_options.ico, 0
 
+	SysGet, MonitorCount, MonitorCount
+	SysGet, MonitorPrimary, MonitorPrimary
+	SysGet, Mon1, Monitor, 1
+	SysGet, Mon2, Monitor, 2
+	SysGet, Mon2, Monitor, 3
+
 	IniRead, shortcut, MoveActiveToSecondMonitor.ini, options, shortcut
 	IniRead, traybar, MoveActiveToSecondMonitor.ini, options, traybar
 	IniRead, autoconfig, MoveActiveToSecondMonitor.ini, options, autoconfig
-
-	Menu, Tray, Icon, ico_monitor_w.ico
 
 ;;--- Menu Tray options ---
 
@@ -74,7 +78,9 @@
 
 ;;--- Automatic or Manual configuration ---
 
-	; TrayTip, %title%, %mode% Shortcut=%shortcut%, 2, 1
+	Menu, Tray, Icon, ico_monitor_w.ico
+
+	;; TrayTip, %title%, %mode% Shortcut=%shortcut%, 2, 1
 
 loadconf:
 	IfEqual, debug, 1, MsgBox, autoconfig=%autoconfig%
@@ -96,33 +102,42 @@ loadconf:
 		SysGet, MonitorPrimary, MonitorPrimary
 		SysGet, Mon1, Monitor, 1
 		SysGet, Mon2, Monitor, 2
+		SysGet, Mon2, Monitor, 3
 
 		MainMonitorWidth := Mon1Right
 		MainMonitorHeight := Mon1Bottom
 		SecondMonitorWidth := Mon2Left
 		SecondMonitorHeight := Mon2Bottom
 
-		MainMonitorHeight -= traybar						; Tray bar
+		MainMonitorHeight -= traybar			; Tray bar remove
+		;; SecondMonitorHeight -= 0			; not implemented, but remove the ; and it works.
 
 		IfLess, SecondMonitorWidth, -1, goto, negative
-		IfEqual, debug, 1, MsgBox, Resolutions automatic : MainMonitorWidth = %MainMonitorWidth% - MainMonitorHeight = %MainMonitorHeight% (tray bar is removed) - SecondMonitorWidth =%SecondMonitorWidth% - SecondMonitorHeight = %SecondMonitorHeight%
+		IfEqual, debug, 1, MsgBox, Resolutions automatic :`n`nMainMonitorWidth = %MainMonitorWidth% - MainMonitorHeight = %MainMonitorHeight% (tray bar is removed)`n`nSecondMonitorWidth =%SecondMonitorWidth% - SecondMonitorHeight = %SecondMonitorHeight%
 		goto, start
 
 		negative:
 		SecondMonitorWidth *=-1
-		IfEqual, debug, 1, MsgBox, Resolutions automatic : MainMonitorWidth = %MainMonitorWidth% - MainMonitorHeight = %MainMonitorHeight% (tray bar is removed) - SecondMonitorWidth =%SecondMonitorWidth% - SecondMonitorHeight = %SecondMonitorHeight%
+		IfEqual, debug, 1, MsgBox, Resolutions automatic :`n`nMainMonitorWidth = %MainMonitorWidth% - MainMonitorHeight = %MainMonitorHeight% (tray bar is removed)`n`nSecondMonitorWidth =%SecondMonitorWidth% - SecondMonitorHeight = %SecondMonitorHeight%
 		goto, start
 
 ;;--- Software start here ---
 
 Start:
-	IfEqual, debug, 1, MsgBox, waiting shortcut=%shortcut% - Mbutton = mouse middle button.
+	IfEqual, debug, 1, MsgBox, waiting shortcut=%shortcut% - Mbutton = mouse middle button. Monitorcount=%monitorcount%
 	KeyWait, %shortcut% , D
+	IfEqual, debug, 1, goto, skip5
+	IfEqual, Monitorcount, 1, goto, error_00
+	skip5:
+	IfEqual, Monitorcount, 2, goto, Movetray
+	IfEqual, Monitorcount, 3, goto, Movetray
+	IfEqual, Autoconfig, 1, Goto, autoconfig		;; added in case changes (resolution or more monitors)
+	IfEqual, Autoconfig, 0, Goto, Iniread			;; added in case changes (resolution or more monitors)
+	Goto, error_00
 
 Movetray:
-	IfEqual, debug, 1, Goto, bypass
+	IfEqual, debug, 1, Goto, start
 	IfEqual, MonitorCount, 1, goto, error_00
-	bypass:
 	activeWindow := WinActive("A")
 	IfEqual, debug, 1, MsgBox, active windows for deplacement = %activeWindow%
 	if activeWindow = 0
@@ -167,7 +182,7 @@ Movetray:
 error_00:
 	KeyWait, %shortcut%
 	Random, error, 1111, 9999
-	TrayTip, %title%, error_%error% You have only 1 screen. You must have at least 2 monitors. Something when wrong., 2, 1
+	TrayTip, %title%, error_%error% You have only 1 screen. You must have at least 2 monitors. Something when wrong. !!! Do a reload !!! Maybe your screen or resolutions has changed, 2, 1
 	Sleep, 500
 	Goto, Start
 
