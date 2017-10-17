@@ -10,12 +10,9 @@
 ;;	THANKS http://www.autohotkey.com/forum/topic19440.html
 ;;	Click on an windows and press F4 , if windows not move press F4 again.
 
-;; The Mbutton is choose for people (like me) doesn't have a keyboard.
+;;	The Mbutton is choose for people (like me) doesn't have a keyboard.
 
 ;;--- Softwares Variables ---
-
-	IfEqual, debug, 1, TrayTip, %title%, DEBUG MODE, 2, 1
-	;;IfEqual, debugmove, 1, TrayTip, %title%, DEBUG MODE, 2, 1
 
 	SetWorkingDir, %A_ScriptDir%
 	SetTitleMatchMode, 2
@@ -26,10 +23,13 @@
 
 	SetEnv, title, ActiveToSecondMonitor
 	SetEnv, mode, Toggle move %shortcut%
-	SetEnv, version, Version 2017-10-17-0729
+	SetEnv, version, Version 2017-10-17-1352
 	SetEnv, Author, LostByteSoft
 	SetEnv, logoicon, ico_monitor.ico
 
+	SysGet, MonitorCount, MonitorCount
+
+	FileInstall, MoveActiveToSecondMonitor.ini, MoveActiveToSecondMonitor.ini
 	FileInstall, ico_about.ico, ico_about.ico, 0
 	FileInstall, ico_HotKeys.ico, ico_HotKeys.ico, 0
 	FileInstall, ico_lock.ico, ico_lock.ico, 0
@@ -41,15 +41,9 @@
 	FileInstall, ico_debug.ico, ico_debug.ico, 0
 	FileInstall, ico_pause.ico, ico_pause.ico, 0
 
-	SysGet, MonitorCount, MonitorCount
-	SysGet, Mon1, Monitor, 1
-	SysGet, Mon2, Monitor, 2
-
-	IniRead, autoconfig, MoveActiveToSecondMonitor.ini, options, autoconfig
 	IniRead, traybar, MoveActiveToSecondMonitor.ini, options, traybar
 	IniRead, shortcut, MoveActiveToSecondMonitor.ini, options, shortcut
 	IniRead, debug, MoveActiveToSecondMonitor.ini, options, debug
-	IniRead, debugmove, MoveActiveToSecondMonitor.ini, options, debugmove
 
 ;;--- Menu Tray options ---
 
@@ -86,131 +80,21 @@
 	menu, tray, add
 	Menu, Tray, Tip, %mode% shortcut=%shortcut%
 
-;;--- Automatic or Manual configuration ---
-
-	Menu, Tray, Icon, ico_monitor_w.ico
-
-loadconf:
-	IfEqual, debug, 1, msgbox, (loadconf) shortcut=%shortcut% traybar=%traybar% autoconfig=%autoconfig% debug=%debug% debugmove=%debugmove% Monitorcount=%monitorcount%`n`nAutoconfig if autoconfig=0 it will ignore.`n`nEcran 1 -- mon1Left=%Mon1Left% -- Top=%Mon1Top% -- Right=%Mon1Right% -- Bottom=%Mon1Bottom%`nEcran 2 -- mon2Left=%Mon2Left% -- Top=%Mon2Top% -- Right=%Mon2Right% -- Bottom=%Mon2Bottom%
-	IfEqual, autoconfig, 0, goto, Iniread
-	IfEqual, autoconfig, 1, goto, autoconfig
-	MsgBox, Autoconfig failled...
-	Goto, error_01
-
-	Iniread:
-		IniRead, MainMonitorWidth, MoveActiveToSecondMonitor.ini, options, MainMonitorWidth
-		IniRead, MainMonitorHeight, MoveActiveToSecondMonitor.ini, options, MainMonitorHeight
-		IniRead, LeftMonitorWidth, MoveActiveToSecondMonitor.ini, options, LeftMonitorWidth
-		IniRead, LeftMonitorHeight, MoveActiveToSecondMonitor.ini, options, LeftMonitorHeight
-		MainMonitorHeight -= traybar
-		MainMonitorWidth := MainMonitorWidth
-		MainMonitorHeight := MainMonitorHeight
-		SecondMonitorWidth := LeftMonitorWidth
-		SecondMonitorHeight := LeftMonitorHeight
-		IfEqual, debug, 1, MsgBox, (Iniread) autoconfig=%autoconfig% Resolutions manual :`n`nMainMonitorWidth=%MainMonitorWidth% - MainMonitorHeight=%MainMonitorHeight% (tray bar is removed)`n`nLeftMonitorWidth=%LeftMonitorWidth% - LeftMonitorHeight=%LeftMonitorHeight%
-		Goto, Start
-
-	autoconfig:
-		SetEnv, MainMonitorWidth, %Mon1Right%
-		SetEnv, MainMonitorHeight, %Mon1Bottom%
-		SetEnv, SecondMonitorWidth, %Mon2Right%
-		SetEnv, SecondMonitorHeight, %Mon2Bottom%
-		SecondMonitorWidth -= %Mon2Left%
-		MainMonitorHeight -= traybar			; Tray bar remove
-		IfEqual, debug, 1, MsgBox, (autoconfig) Resolutions automatic :`n`nMainMonitorWidth=%MainMonitorWidth% - MainMonitorHeight=%MainMonitorHeight% (tray bar is removed)`n`nSecondMonitorWidth=%SecondMonitorWidth% - SecondMonitorHeight=%SecondMonitorHeight%
-		goto, start
-
-Goto, error_01
-
 ;;--- Software start here ---
 
 Start:
-	IfEqual, debug, 1, MsgBox, (Start) waiting shortcut=%shortcut%`n`nMainMonitorWidth=%MainMonitorWidth% MainMonitorHeight=%MainMonitorHeight%`n`nSecondMonitorWidth=%SecondMonitorWidth% SecondMonitorHeight=%SecondMonitorHeight%
+	IfEqual, debug, 1, MsgBox, (Start) waiting shortcut=%shortcut%
 	Menu, Tray, Icon, ico_monitor_w.ico
 	KeyWait, %shortcut% , D
 	WinGetTitle, WinActive, A
 	IfEqual, Monitorcount, 1, goto, error_00
 
 Movetray:
-	;; debugmove start here
-	;; The scale NOT occur in W H, causes bug with some windows ie: calcs, cmd, and others non modifiable size.
 	activeWindow := WinActive("A")
-	IfEqual, debugmove, 1, MsgBox, (Movetray) activeWindow=%activeWindow%`n`nWinactive=%WinActive%
-	if activeWindow = 0
-	{
-	return
-	}
-	WinGet, minMax, MinMax, ahk_id %activeWindow%
-	if minMax = 1
-	{
-	WinRestore, ahk_id %activeWindow%
-	}
-
-	WinGetPos, x, y, width, height, ahk_id %activeWindow%
-	IfEqual, debugmove, 1, MsgBox, (WinGetPos) activewindows=%activeWindow%`n`nx=%x% y=%y% width=%width% height=%height%`n`nDetermine var to check if negative or positive : x=%x% SecondMonitorWidth=%SecondMonitorWidth% Mon2Left=%mon2left%
-	;; Set windows dimentions if x < 0
-	;; if screen is left (negative var)
-	ifLess, mon2left, 0
-	{
-	xScale := MainMonitorWidth / secondMonitorWidth
-	yScale := MainMonitorHeight / secondMonitorHeight
-	newX := x * xScale
-	newY := y * yScale
-	newWidth := width 		;* xScale	;; no scale in W H
-	newHeight := height 		;* yScale	;; no scale in W H
-	newX += secondMonitorWidth			;; must be +
-
-	SetEnv, newx1, %mon2Left%
-	newx1 *=-1
-	IfEqual, debugmove, 1, MsgBox, (Check) newx=%newx% ne doit pas etre plus grand que newx1=%newx1%
-
-	IfLess, newx, %Mon1RIght%, Goto, skip3
-
-	IfGreater, newx, %newx1%, Goto, skip3
-
-	x := secondMonitorWidth + x
-	newX *=-1
-
-
-	skip3:
-	}
-	else
-	{
-	;; if x > 0 , Set windows dimentions if x > 0 , no scale in W H
-	xScale := MainMonitorWidth / secondMonitorWidth
-	yScale := MainMonitorHeight / secondMonitorHeight
-	newX := x * xScale
-	newY := y * yScale
-	newWidth := width 		;* xScale	;; no scale in W H
-	newHeight := height 		;* yScale	;; no scale in W H
-	newX += secondMonitorWidth			;; must be +
-	newX1 := MainMonitorWidth + MainMonitorWidth
-	IfEqual, debugmove, 1, MsgBox, (isINsecmon) newx=%newx% ne doit pas etre plus grand que newx1=%newx1%
-	IfGreater, newx, %newx1%, Goto, isINsecmon2
-	x := secondMonitorWidth + x
-	goto, skip4
-	isINsecmon2:
-	moin := MainMonitorWidth+secondMonitorWidth
-	newX := newX - moin
-	IfEqual, debugmove, 1, MsgBox, (issecmonright) change value newx newX=%newX%
-	;;IfGreater, newx, 0, goto, skip4
-	;;IfEqual, debugmove, 1, MsgBox, Newx is negative. newx=%newx% newX *=-1
-	;;newX *=-1
-	skip4:
-	}
-
-
-WinMove:
-	IfEqual, debugmove, 1, MsgBox, (WinMove) Move windows with new dimentions. activeWindow=%activeWindow%`n`nnewx=%newX% newy=%newY% newWidth=%newWidth% newHeight=%newHeight%
-	WinMove, ahk_id %activeWindow%, , %newX%, %newY%, %newWidth%, %newHeight%
-	if minMax = 1
-	{
-	WinMaximize, ahk_id %activeWindow%
-	}
-	WinActivate ahk_id %activeWindow%  			;Needed - otherwise another window may overlap it
+	IfEqual, debug, 1, MsgBox, (Movetray) Winactive=%WinActive%- activeWindow=%activeWindow%
+	Send, {LWin Down}{LShift Down}{RIGHT}{LShift Up}{LWin Up}
 	KeyWait, %shortcut%
-	IfEqual, debug, 1, MsgBox, (KeyWait) windows has moved ?
-	goto, start
+	Goto, Start
 
 error_00:
 	KeyWait, %shortcut%
@@ -274,7 +158,7 @@ GuiClose2:
 Close:
 	ExitApp
 
-Escape::			;; debug purpose
+;; Escape::			;; debug purpose
 	Goto, ExitApp
 
 doReload:
